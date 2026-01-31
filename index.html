@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Greenlake Naturals - POS System</title>
+    <title>Greenlake Naturales - POS System</title>
     <style>
         :root {
             /* Light Theme */
@@ -538,7 +538,7 @@
     <div id="login-view">
         <div class="card login-card">
             <div class="text-center" style="margin-bottom: 2rem;">
-                <h1 class="text-2xl font-bold text-primary">Greenlake Naturals</h1>
+                <h1 class="text-2xl font-bold text-primary">Greenlake Naturales</h1>
                 <p class="text-muted">Shop Billing System</p>
                 <div id="login-msg" class="text-muted text-xs">Default PIN: 1234</div>
             </div>
@@ -568,7 +568,7 @@
         <!-- Sidebar -->
         <aside id="sidebar">
             <div class="sidebar-header">
-                <h2 class="text-xl font-bold text-primary">Greenlake Naturals</h2>
+                <h2 class="text-xl font-bold text-primary">Greenlake Naturales</h2>
             </div>
             <nav class="flex flex-col flex-1 p-2 gap-2">
                 <a class="nav-item" data-view="dashboard" onclick="App.router.navigate('dashboard')">
@@ -774,6 +774,10 @@
                         <div class="flex items-center gap-2 mt-2">
                             <input type="checkbox" id="set-show-logo" style="width: auto;">
                             <label for="set-show-logo">Show Logo in Receipt</label>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <input type="checkbox" id="set-show-gst" style="width: auto;">
+                            <label for="set-show-gst">Show GST on Receipt</label>
                         </div>
                     </div>
                     <!-- UPI QR Section -->
@@ -995,7 +999,7 @@
 
                 // Initialize Defaults if missing
                 if (Store.get('shop_config', null) === null) {
-                    Store.set('shop_config', { name: 'Greenlake Naturals', address: 'City Center', phone: '9876543210', gst_default: 18, footer: 'Thank you for visiting!' });
+                    Store.set('shop_config', { name: 'Greenlake Naturales', address: 'City Center', phone: '9876543210', gst_default: 18, footer: 'Thank you for visiting!' });
                 }
                 if (Store.get('categories', []).length === 0) {
                     Store.set('categories', [{ id: 'c1', name: 'Lipstick', color: '#ffcccb' }, { id: 'c2', name: 'Skincare', color: '#d1e7dd' }]);
@@ -1669,7 +1673,7 @@
                     App.pos.clearCart();
                 },
                 printReceipt: (inv) => {
-                    const config = Store.get('shop_config', { name: 'Greenlake Naturals' });
+                    const config = Store.get('shop_config', { name: 'Greenlake Naturales' });
                     // Debug: Check if logo data exists
                     if (!config.logo) console.warn("No logo found in config");
                     if (!config.show_logo) console.warn("Show logo is disabled");
@@ -1709,7 +1713,7 @@
                         <div class="receipt-divider"></div>
                         <div class="receipt-line"><span>Subtotal</span> <span>${Utils.formatCurrency(inv.subtotal || inv.total)}</span></div>
                         ${inv.discount > 0 ? `<div class="receipt-line"><span>Discount</span> <span>- ${Utils.formatCurrency(inv.discount)}</span></div>` : ''}
-                        ${inv.tax > 0 ? `<div class="receipt-line"><span>Tax</span> <span>${Utils.formatCurrency(inv.tax)}</span></div>` : ''}
+                        ${(config.show_gst !== false && inv.tax > 0) ? `<div class="receipt-line"><span>Tax</span> <span>${Utils.formatCurrency(inv.tax)}</span></div>` : ''}
                         <div class="receipt-line" style="font-weight:bold; border-top:1px dashed #000; padding-top:5px; margin-top:5px;">
                             <span>Total</span> <span>${Utils.formatCurrency(inv.total)}</span>
                         </div>
@@ -1730,6 +1734,7 @@
                     document.getElementById('set-gst-default').value = c.gst_default || '';
                     document.getElementById('set-footer').value = c.footer || '';
                     document.getElementById('set-show-logo').checked = c.show_logo || false;
+                    document.getElementById('set-show-gst').checked = c.show_gst !== false; // Default to true
                     if (c.logo) {
                         const img = document.getElementById('set-logo-preview');
                         img.src = c.logo;
@@ -1768,6 +1773,7 @@
                         footer: document.getElementById('set-footer').value,
                         logo: logo,
                         show_logo: document.getElementById('set-show-logo').checked,
+                        show_gst: document.getElementById('set-show-gst').checked,
                         upi_qr: upi_qr
                     };
                     Store.set('shop_config', c);
