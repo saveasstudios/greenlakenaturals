@@ -540,7 +540,7 @@
             <div class="text-center" style="margin-bottom: 2rem;">
                 <h1 class="text-2xl font-bold text-primary">Greenlake Naturals</h1>
                 <p class="text-muted">Shop Billing System</p>
-                <div id="login-msg" class="text-muted text-xs">Default PIN: 1234</div>
+                <div id="login-msg" class="text-muted text-xs"></div>
             </div>
             <form id="login-form" class="flex flex-col gap-4">
                 <div>
@@ -789,6 +789,7 @@
                     <input id="set-shop-name" class="input" placeholder="Shop Name">
                     <input id="set-shop-addr" class="input" placeholder="Address">
                     <input id="set-shop-phone" class="input" placeholder="Phone">
+                    <input id="set-shop-gstin" class="input" placeholder="GSTIN (Optional)">
                     <input id="set-gst-default" class="input" type="number" placeholder="Default GST %">
                     <input id="set-footer" class="input" placeholder="Receipt Footer Message">
                     <button class="btn btn-primary" onclick="App.settings.save()">Save Settings</button>
@@ -894,10 +895,11 @@
 
                 <!-- Order Type Selection -->
                 <div class="flex justify-center gap-2 mb-2">
-                    <button id="btn-order-takein" class="btn btn-primary" onclick="App.pos.setOrderType('Take In')">🍽️
-                        Take In</button>
-                    <button id="btn-order-delivery" class="btn" onclick="App.pos.setOrderType('Delivery')">🛵
-                        Delivery</button>
+                    <button id="btn-order-takein" class="btn btn-primary"
+                        onclick="App.pos.setOrderType('Self Pickup')">🍽️
+                        Self Pickup</button>
+                    <button id="btn-order-delivery" class="btn" onclick="App.pos.setOrderType('Courier')">🛵
+                        Courier</button>
                 </div>
 
                 <!-- QR Display -->
@@ -988,11 +990,11 @@
                     modified = true;
                 }
                 if (!users.find(u => u.id === 'admin')) {
-                    users.push({ id: 'admin', name: 'Administrator', role: 'admin', pin: '1234' });
+                    users.push({ id: 'admin', name: 'Administrator', role: 'admin', pin: '4321' });
                     modified = true;
                 }
                 if (!users.find(u => u.id === 'staff1')) {
-                    users.push({ id: 'staff1', name: 'Staff Member', role: 'staff', pin: '0000' });
+                    users.push({ id: 'staff1', name: 'Staff Member', role: 'staff', pin: '1234' });
                     modified = true;
                 }
                 if (modified) Store.set('users', users);
@@ -1440,7 +1442,7 @@
             pos: {
                 cart: [],
                 filterCategory: '',
-                orderType: 'Take In',
+                orderType: 'Self Pickup',
 
                 renderProducts: () => {
                     App.pos.filterAndRender();
@@ -1574,7 +1576,7 @@
                     document.getElementById('pay-discount-type').value = 'amount';
 
                     // Reset Order Type
-                    App.pos.setOrderType('Take In');
+                    App.pos.setOrderType('Self Pickup');
 
                     App.router.showModal('modal-checkout');
                 },
@@ -1583,7 +1585,7 @@
                     const btnIn = document.getElementById('btn-order-takein');
                     const btnDel = document.getElementById('btn-order-delivery');
 
-                    if (type === 'Take In') {
+                    if (type === 'Self Pickup') {
                         btnIn.classList.add('btn-primary');
                         btnDel.classList.remove('btn-primary');
                     } else {
@@ -1674,6 +1676,9 @@
                 },
                 printReceipt: (inv) => {
                     const config = Store.get('shop_config', { name: 'Greenlake Naturals' });
+                    const custs = Store.get('customers', []);
+                    const cName = custs.find(c => c.id === inv.customer_id)?.name || 'Guest';
+
                     // Debug: Check if logo data exists
                     if (!config.logo) console.warn("No logo found in config");
                     if (!config.show_logo) console.warn("Show logo is disabled");
@@ -1690,11 +1695,13 @@
                                 <h3 style="margin:0">${config.name}</h3>
                                 <p style="margin:0; font-size:0.8em">${config.address}</p>
                                 <p style="margin:0; font-size:0.8em">${config.phone}</p>
+                                ${config.gstin ? `<p style="margin:0; font-size:0.8em">GSTIN: ${config.gstin}</p>` : ''}
                             </div>
                             <div style="clear:both;"></div>
                         </div>
                         <div style="text-align:center; margin-bottom:10px; border-bottom:1px dashed #000; padding-bottom:5px">
                             <p style="margin:0">Invoice: ${inv.invoice_no}</p>
+                            <p style="margin:0">Customer: ${cName}</p>
                             <p style="margin:0">${inv.date.replace('T', ' ').substring(0, 16)}</p>
                         </div>
                         <div class="receipt-divider"></div>
@@ -1718,6 +1725,7 @@
                             <span>Total</span> <span>${Utils.formatCurrency(inv.total)}</span>
                         </div>
                         <div class="receipt-line"><span>Mode</span> <span>${inv.payment_mode}</span></div>
+                        <div class="receipt-line"><span>Type</span> <span>${inv.order_type || 'Take In'}</span></div>
                         <div class="receipt-divider"></div>
                         <div style="text-align:center">${config.footer || 'Thanks!'}</div>
                     `;
@@ -1731,6 +1739,7 @@
                     document.getElementById('set-shop-name').value = c.name || '';
                     document.getElementById('set-shop-addr').value = c.address || '';
                     document.getElementById('set-shop-phone').value = c.phone || '';
+                    document.getElementById('set-shop-gstin').value = c.gstin || '';
                     document.getElementById('set-gst-default').value = c.gst_default || '';
                     document.getElementById('set-footer').value = c.footer || '';
                     document.getElementById('set-show-logo').checked = c.show_logo || false;
@@ -1769,6 +1778,7 @@
                         name: document.getElementById('set-shop-name').value,
                         address: document.getElementById('set-shop-addr').value,
                         phone: document.getElementById('set-shop-phone').value,
+                        gstin: document.getElementById('set-shop-gstin').value,
                         gst_default: parseFloat(document.getElementById('set-gst-default').value),
                         footer: document.getElementById('set-footer').value,
                         logo: logo,
@@ -1911,7 +1921,10 @@
                                 <td>${cName}</td>
                                 <td>${i.payment_mode}</td>
                                 <td>${Utils.formatCurrency(i.total)}</td>
-                                <td><button class="btn btn-sm" onclick="App.reports.print('${i.id}')">🖨️</button></td>
+                                <td>
+                                    <button class="btn btn-sm" onclick="App.reports.print('${i.id}')" title="Print">🖨️</button>
+                                    <button class="btn btn-sm text-primary" onclick="App.reports.edit('${i.id}')" title="Edit/Void">✏️</button>
+                                </td>
                             </tr>`;
                         }).join('')}
                                     </tbody>
@@ -1939,7 +1952,10 @@
                                 <td>${i.invoice_no}</td>
                                 <td>${cName}</td>
                                 <td>${Utils.formatCurrency(i.total)}</td>
-                                <td><button class="btn btn-sm" onclick="App.reports.print('${i.id}')">🖨️</button></td>
+                                <td>
+                                    <button class="btn btn-sm" onclick="App.reports.print('${i.id}')" title="Print">🖨️</button>
+                                    <button class="btn btn-sm text-primary" onclick="App.reports.edit('${i.id}')" title="Edit/Void">✏️</button>
+                                </td>
                             </tr>`;
                         }).join('')}
                                     </tbody>
@@ -2061,6 +2077,41 @@
                 print: (id) => {
                     const inv = Store.get('invoices', []).find(i => i.id === id);
                     if (inv) App.pos.printReceipt(inv);
+                },
+                edit: (id) => {
+                    if (!confirm("Edit this invoice? The current invoice will be deleted, stock will be restored, and items will be moved to the cart for editing.")) return;
+
+                    // 1. Get Invoice & Verify
+                    const invs = Store.get('invoices', []);
+                    const invIdx = invs.findIndex(i => i.id === id);
+                    if (invIdx === -1) return;
+                    const inv = invs[invIdx];
+
+                    // 2. Restore Stock
+                    const prods = Store.get('products', []);
+                    inv.items.forEach(item => {
+                        const p = prods.find(x => x.id === item.id);
+                        if (p) p.stock += item.qty;
+                    });
+                    Store.set('products', prods);
+
+                    // 3. Remove Invoice
+                    invs.splice(invIdx, 1);
+                    Store.set('invoices', invs);
+
+                    // 4. Load Cart
+                    App.pos.cart = inv.items;
+
+                    // Handle Customer
+                    if (inv.customer_id) {
+                        const cSelect = document.getElementById('cart-customer');
+                        if (cSelect) cSelect.value = inv.customer_id;
+                    }
+
+                    // Refresh State & Navigate
+                    App.pos.renderCart();
+                    App.router.navigate('pos');
+                    alert("Invoice recalled to cart. Make changes and checkout again.");
                 }
             }
         };
@@ -2071,4 +2122,3 @@
 </body>
 
 </html>
-
