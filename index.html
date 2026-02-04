@@ -1677,7 +1677,8 @@
                 printReceipt: (inv) => {
                     const config = Store.get('shop_config', { name: 'Greenlake Naturals' });
                     const custs = Store.get('customers', []);
-                    const cName = custs.find(c => c.id === inv.customer_id)?.name || 'Guest';
+                    const customer = custs.find(c => c.id === inv.customer_id);
+                    const cName = customer ? customer.name : 'Guest';
 
                     // Debug: Check if logo data exists
                     if (!config.logo) console.warn("No logo found in config");
@@ -1702,6 +1703,8 @@
                         <div style="text-align:center; margin-bottom:10px; border-bottom:1px dashed #000; padding-bottom:5px">
                             <p style="margin:0">Invoice: ${inv.invoice_no}</p>
                             <p style="margin:0">Customer: ${cName}</p>
+                            ${customer && customer.phone ? `<p style="margin:0">Mobile: ${customer.phone}</p>` : ''}
+                            ${customer && customer.address ? `<p style="margin:0">Address: ${customer.address}</p>` : ''}
                             <p style="margin:0">${inv.date.replace('T', ' ').substring(0, 16)}</p>
                         </div>
                         <div class="receipt-divider"></div>
@@ -1924,6 +1927,7 @@
                                 <td>
                                     <button class="btn btn-sm" onclick="App.reports.print('${i.id}')" title="Print">🖨️</button>
                                     <button class="btn btn-sm text-primary" onclick="App.reports.edit('${i.id}')" title="Edit/Void">✏️</button>
+                                    <button class="btn btn-sm text-danger" onclick="App.reports.delete('${i.id}')" title="Delete Permanent">🗑️</button>
                                 </td>
                             </tr>`;
                         }).join('')}
@@ -1955,6 +1959,7 @@
                                 <td>
                                     <button class="btn btn-sm" onclick="App.reports.print('${i.id}')" title="Print">🖨️</button>
                                     <button class="btn btn-sm text-primary" onclick="App.reports.edit('${i.id}')" title="Edit/Void">✏️</button>
+                                    <button class="btn btn-sm text-danger" onclick="App.reports.delete('${i.id}')" title="Delete Permanent">🗑️</button>
                                 </td>
                             </tr>`;
                         }).join('')}
@@ -2111,7 +2116,37 @@
                     // Refresh State & Navigate
                     App.pos.renderCart();
                     App.router.navigate('pos');
+                    App.pos.renderCart();
+                    App.router.navigate('pos');
                     alert("Invoice recalled to cart. Make changes and checkout again.");
+                },
+                delete: (id) => {
+                    if (!confirm("Delete this invoice PERMANENTLY? Stock will be restored.")) return;
+
+                    // 1. Get Invoice
+                    const invs = Store.get('invoices', []);
+                    const invIdx = invs.findIndex(i => i.id === id);
+                    if (invIdx === -1) return;
+                    const inv = invs[invIdx];
+
+                    // 2. Restore Stock
+                    const prods = Store.get('products', []);
+                    inv.items.forEach(item => {
+                        const p = prods.find(x => x.id === item.id);
+                        if (p) p.stock += item.qty;
+                    });
+                    Store.set('products', prods);
+
+                    // 3. Remove Invoice
+                    invs.splice(invIdx, 1);
+                    Store.set('invoices', invs);
+
+                    // 4. Refresh Report
+                    alert("Invoice deleted and stock restored.");
+                    // Identify current view context or just reload default 'daily' for simplicity,
+                    // or ideally re-render the current report type if possible.
+                    // Since we are inside reports view, we can try to refresh the last known report or just daily.
+                    App.reports.render('daily');
                 }
             }
         };
